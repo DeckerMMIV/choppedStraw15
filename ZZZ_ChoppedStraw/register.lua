@@ -57,18 +57,18 @@ function ChoppedStraw_Register:loadMap(name)
 end;
 
 function ChoppedStraw_Register:update(dt)
-  if not ChoppedStraw_Register.initialized then
-    ChoppedStraw_Register.initialized = true -- Only initialize ONCE.
-
-    -- If SoilMod did not "call us", then do it "the old way"...
-    --if not ChoppedStraw_Register.soilModPresent then
-		ChoppedStraw_Register.old_UpdateDestroyCommonArea = Utils.updateDestroyCommonArea;
-		Utils.updateDestroyCommonArea = ChoppedStraw_Register.updateDestroyCommonArea;
-
-		ChoppedStraw_Register.old_updateSowingArea = Utils.updateSowingArea;
-		Utils.updateSowingArea = ChoppedStraw_Register.updateSowingArea;
-    --end;
-  end;
+	if not ChoppedStraw_Register.initialized then
+		ChoppedStraw_Register.initialized = true -- Only initialize ONCE.
+    
+		-- If SoilMod-v2.x does not exist then do it "the old way"...
+		if modSoilMod2 == nil then
+			ChoppedStraw_Register.old_UpdateDestroyCommonArea = Utils.updateDestroyCommonArea;
+			Utils.updateDestroyCommonArea = ChoppedStraw_Register.updateDestroyCommonArea;
+    
+			ChoppedStraw_Register.old_updateSowingArea = Utils.updateSowingArea;
+			Utils.updateSowingArea = ChoppedStraw_Register.updateSowingArea;
+		end;
+	end;
 end;
 
 function ChoppedStraw_Register.updateDestroyCommonArea(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ)
@@ -100,14 +100,20 @@ function ChoppedStraw_Register.updateSowingArea(fruitId, startWorldX, startWorld
 end;
 
 Utils.updateStrawHaulmArea = function(preparingOutputId, x, z, x1, z1, x2, z2)
-	local IDs,detailId = {},g_currentMission.terrainDetailId;
-	table.insert(IDs,g_currentMission.cultivatorChannel);
-	table.insert(IDs,g_currentMission.sowingChannel);
-	table.insert(IDs,g_currentMission.ploughChannel);
-	local dx, dz, dwidthX, dwidthZ, dheightX, dheightZ = Utils.getXZWidthAndHeight(detailId, x, z, x1, z1, x2, z2)
-	for i = 1, table.getn(IDs) do
-		setDensityMaskedParallelogram(preparingOutputId, dx, dz, dwidthX, dwidthZ, dheightX, dheightZ, 0, 1, detailId, IDs[i], 1, 1)
-	end
+	local dx, dz, dwidthX, dwidthZ, dheightX, dheightZ = Utils.getXZWidthAndHeight(nil, x, z, x1, z1, x2, z2)
+	local includeMask = 
+		2^g_currentMission.cultivatorChannel 
+		+ 2^g_currentMission.sowingChannel 
+		+ 2^g_currentMission.ploughChannel;
+	setDensityMaskParams(preparingOutputId, "greater", 0,0,includeMask,0)
+	setDensityMaskedParallelogram(
+		preparingOutputId, 
+		dx, dz, dwidthX, dwidthZ, dheightX, dheightZ, 
+		0, 1, 
+		g_currentMission.terrainDetailId, g_currentMission.terrainDetailTypeFirstChannel, g_currentMission.terrainDetailTypeNumChannels, 
+		1
+	)
+	setDensityMaskParams(preparingOutputId, "greater", -1)
 end;
 
 function ChoppedStraw_Register:deleteMap() end;
